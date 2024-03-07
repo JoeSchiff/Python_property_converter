@@ -30,6 +30,8 @@ to this:
         ...
 ```
 
+
+<br><br>
 Since there cannot be a docstring between the decorator and the def statement, the docstrings will be moved from here:
 ```
     property cheese:
@@ -44,6 +46,25 @@ to here:
         "A doc string can go here."
         ...
 ```
+
+
+<br><br>
+Choose a class declaration syntax
+
+Pure Python
+```
+@cython.cclass
+class Spam:
+    @property
+    def cheese(self):
+```
+Cython
+```
+cdef class Spam:
+    @property
+    def cheese(self):
+```
+
 
 
 Indents must not contain both tabs and spaces.
