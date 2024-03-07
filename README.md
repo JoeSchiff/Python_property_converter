@@ -32,7 +32,7 @@ to this:
 
 
 <br><br>
-#### Docstrings ####
+### Docstrings ###
 Since there cannot be a docstring between the decorator and the def statement, the docstrings will be moved from here:
 ```
     property cheese:
@@ -50,7 +50,7 @@ to here:
 
 
 <br><br>
-#### Class declaration syntax ####
+### Class declaration syntax ###
 
 Choose either Pure Python:
 ```
@@ -67,8 +67,11 @@ cdef class Spam:
 ```
 
 
-
+<br><br>
 Indents must not contain both tabs and spaces.
 
+<br>
 Requires Python 3.10 +
 
+
+<br><br>
