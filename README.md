@@ -64,12 +64,14 @@ Choose either Pure Python:
 class Spam:
     @property
     def cheese(self):
+        ...
 ```
 or Cython:
 ```
 cdef class Spam:
     @property
     def cheese(self):
+        ...
 ```
 
 
