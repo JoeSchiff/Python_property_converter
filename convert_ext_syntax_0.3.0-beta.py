@@ -5,18 +5,53 @@
 
 
 
-
+import argparse
+import distutils
 import pathlib
 
 
-# you must populate these
-INPUT_PATH = r""
-OUTPUT_PATH = r""
+
+#INPUT_PATH = r"C:\Users\jschiffler\Desktop\pyav\PyAV-main"
+#OUTPUT_PATH = r"C:\Users\jschiffler\Desktop\pyav\new_syn"
 
 
 
-PROJECT_NAME = pathlib.Path(INPUT_PATH).parts[-1]
+parser = argparse.ArgumentParser(description='Optional app description')
 
+
+parser.add_argument('--input_dir', '-i', type=str, nargs='?', default=".",
+                    help='Path of the folder containing the files to be modified. Default: Current working directory.')
+
+parser.add_argument('--output_dir', '-o', type=str, nargs='?', default="DEFAULT",
+                    help='Path of the folder to save the modified files. Default: create a subfolder called `new_syntax` where the script is located.')
+
+parser.add_argument('--class_dec', '-c', type=str, choices=('cython', 'pure_python'), default="cython",
+                    help='Which class declaration syntax to use. cython: `cdef class Spam:` or pure_python `@cython.cclass\nclass Spam:`. Default: cython')
+
+parser.add_argument('--output_mod_only', '-m', dest='output_mod_only', type=lambda x:bool(distutils.util.strtobool(x)), default=False,
+                    help='True/False. Output all files or only modified files. Default: False (output all files)')
+
+
+args = parser.parse_args()
+
+
+
+input_path = pathlib.Path(args.input_dir)
+if input_path.is_dir():
+    print(f"input is dir: {input_path}")
+elif input_path.is_file():
+    print(f"input is file: {input_path}")
+input_path = input_path.resolve()
+
+
+if args.output_dir == "DEFAULT":
+    output_path = pathlib.Path(__file__).parent.joinpath('new_syntax')
+    #output_path.mkdir(exist_ok=True)
+else:
+    output_path = pathlib.Path(args.output_dir)
+
+print(f"output dir:: {output_path.resolve()}")
+    
 
 
 
@@ -26,6 +61,7 @@ class IndentTracker:
     one_indent = ""
     property_indent = ""
     property_name = ""
+    disallow_space = False  # Prevent newlines after decorator
     
     def update_indent(line):      
         if not line.strip():
@@ -48,6 +84,7 @@ class IndentTracker:
         # End of property block
         if len(IndentTracker.current_indent) <= len(IndentTracker.property_indent):
             IndentTracker.property_name = ""
+            IndentTracker.disallow_space = False
 
         # Always set prev to current
         IndentTracker.prev_indent = IndentTracker.current_indent
@@ -56,18 +93,26 @@ class IndentTracker:
         """Prevent use of mixed spaces and tabs in an indent"""
         indent = get_indent(line)
         if " " in indent and "\t" in indent:
-            print("ERROR mixed indent", line)
+            print(f"ERROR mixed indent on line number {index}: {repr(line)}")
+            print(f"\n An indent must not contain both tabs and spaces.\n")
+            raise SystemExit
+        """
             if IndentTracker.one_indent:
-                line = line.replace("\t", IndentTracker.one_indent)
+                if "\t" in IndentTracker.one_indent:
+                    line = line.replace("    ", IndentTracker.one_indent)
+                else:
+                    line = line.replace("\t", IndentTracker.one_indent)
             else:
                 spaces = line.count(" ")
                 line = line.replace("\t", " "*spaces)
+        """
         return line
 
 class Docstring:
     """A docstring for a property must be saved and moved to after a def statement"""
     
     COLON_PREFIXES = ("if ", "elif ", "else ", "for ", "while ", "def ", "cdef ", "cpdef ")
+    DEMLIM_CHARS = ("'''", '"""', "'", '"')
 
     text = ""
     descriptor = ""
@@ -78,7 +123,7 @@ class Docstring:
         
         ## change to line.strip()[:3]?
         # Set triple quote style
-        for delim_char in ("'''", '"""'):
+        for delim_char in Docstring.DEMLIM_CHARS:
             if line.strip().startswith(delim_char):
                 Docstring.delim_char = delim_char
                 break
@@ -172,14 +217,16 @@ def convert_line(line):
     """Return empty when you want to exclude the line from the output file.
     I.e. docstrings.
     """
-    
+
     if Docstring.build_multi_line(line):
         return
 
     if not line.strip():
-        if Docstring.descriptor == "INSERT":  # Remove extra newline
+        if Docstring.descriptor == "INSERT" or IndentTracker.disallow_space:  # Remove extra newline
             return
         return line
+    
+    IndentTracker.disallow_space = False
     
     modified_line = line
     
@@ -194,6 +241,7 @@ def convert_line(line):
         case string if string.startswith("property "):
             IndentTracker.property_indent = get_indent(line)
             IndentTracker.property_name = line.split("property ")[1].split(":")[0]
+            IndentTracker.disallow_space = True
             modified_line = f"{get_indent(line)}@property"
             
         # Prop get
@@ -212,7 +260,7 @@ def convert_line(line):
                 modified_line = two_line_convert(line, "__del__", "deleter")
 
         # Docstring
-        case string if string.startswith("'''") or string.startswith('"""'):
+        case string if string.startswith("'") or string.startswith('"'):
             if IndentTracker.property_name:
                 Docstring.new_docstring_detected(line)
                 return
@@ -236,10 +284,28 @@ def write_file(path, content):
         f.write(content)
 
 
+def get_output_path(file_path):
+    project_name_ind = file_path.parts.index(PROJECT_NAME)
+    rel_path_parts = file_path.parts[project_name_ind:]
+    return pathlib.Path(output_path).joinpath(*rel_path_parts)
+
+
+def copy_orig_dir():
+    #if not args.output_mod_only and input_path.is_dir():
+    if not args.output_mod_only:
+        new_output_path = output_path.joinpath(PROJECT_NAME)
+        distutils.dir_util.copy_tree(str(input_path), str(new_output_path))
+
+
+
+PROJECT_NAME = pathlib.Path(input_path).parts[-1]
+copy_orig_dir()
+
+
 modified_files = []
-for file_path in pathlib.Path(INPUT_PATH).glob("**/*.pyx"):
-    rel_path_parts = file_path.parts[file_path.parts.index(PROJECT_NAME):]
-    output_file_path = pathlib.Path(OUTPUT_PATH).joinpath(*rel_path_parts)
+for file_path in pathlib.Path(input_path).glob("**/*.pyx"):
+    output_file_path = get_output_path(file_path)
+    output_file_path.parent.mkdir(exist_ok=True, parents=True)
     print(f'\n       {file_path=}')
     print(f'{output_file_path=}')
     
@@ -247,7 +313,7 @@ for file_path in pathlib.Path(INPUT_PATH).glob("**/*.pyx"):
     modified_file_contents = ""
     
     with open(file_path) as file:
-        for line in file.read().splitlines():
+        for index, line in enumerate(file.read().splitlines(), 1):
             IndentTracker.update_indent(line)
             modified_line = convert_line(line)
             
