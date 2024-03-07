@@ -7,6 +7,7 @@ Convert properties in Cython extension classes from the deprecated legacy syntax
 
 ### Is this what you're trying to do? ###
 ![](assets/screenshot.png)
+https://cython.readthedocs.io/en/stable/src/userguide/extension_types.html#properties
 <br><br>
 
 
