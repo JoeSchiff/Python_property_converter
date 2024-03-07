@@ -38,6 +38,13 @@ to this:
 ```
 
 
+
+<br><br>
+### Basic Usage ###
+python convert_ext_syntax_0.3.0-beta.py -i /path/to/files/ -o /path/to/output/
+
+
+
 <br><br>
 ### Docstrings ###
 Since there cannot be a docstring between the decorator and the def statement, the docstrings will be moved from here:
