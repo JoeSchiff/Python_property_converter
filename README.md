@@ -41,7 +41,7 @@ to this:
 
 <br><br>
 ### Basic Usage ###
-python convert_ext_syntax_0.3.0-beta.py -i /path/to/files/ -o /path/to/output/
+`python convert_ext_syntax_0.3.0-beta.py -i /path/to/files/ -o /path/to/output/`
 
 
 
