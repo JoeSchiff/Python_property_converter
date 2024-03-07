@@ -32,6 +32,7 @@ to this:
 
 
 <br><br>
+#### Docstrings ####
 Since there cannot be a docstring between the decorator and the def statement, the docstrings will be moved from here:
 ```
     property cheese:
@@ -49,16 +50,16 @@ to here:
 
 
 <br><br>
-Choose a class declaration syntax
+#### Class declaration syntax ####
 
-Pure Python
+Choose either Pure Python:
 ```
 @cython.cclass
 class Spam:
     @property
     def cheese(self):
 ```
-Cython
+or Cython:
 ```
 cdef class Spam:
     @property
