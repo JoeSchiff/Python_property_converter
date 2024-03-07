@@ -1,5 +1,5 @@
-# Cython property converter
-Convert properties in Cython extension classes from the deprecated legacy syntax to the decorator syntax.
+<h1 align="center">Cython Property Converter</h1>
+<h2 align="center">Convert properties in Cython extension classes from the deprecated legacy syntax to the decorator syntax.</h2>
 
 <br><br>
 ## ===  Under construction  === ##
