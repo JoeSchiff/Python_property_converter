@@ -5,6 +5,11 @@ Convert properties in Cython extension classes from the deprecated legacy syntax
 ## ===  Under construction  === ##
 <br><br>
 
+### Is this what you're trying to do? ###
+![](assets/screenshot.png)
+<br><br>
+
+
 Convert from this:
 ```
     property cheese:
