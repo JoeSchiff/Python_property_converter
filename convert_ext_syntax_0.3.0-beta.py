@@ -11,8 +11,6 @@ import pathlib
 
 
 
-#INPUT_PATH = r"C:\Users\jschiffler\Desktop\pyav\PyAV-main"
-#OUTPUT_PATH = r"C:\Users\jschiffler\Desktop\pyav\new_syn"
 
 
 
@@ -36,13 +34,7 @@ args = parser.parse_args()
 
 
 
-input_path = pathlib.Path(args.input_dir)
-if input_path.is_dir():
-    print(f"input is dir: {input_path}")
-elif input_path.is_file():
-    print(f"input is file: {input_path}")
-input_path = input_path.resolve()
-
+input_path = pathlib.Path(args.input_dir).resolve()
 
 if args.output_dir == "DEFAULT":
     output_path = pathlib.Path(__file__).parent.joinpath('new_syntax')
