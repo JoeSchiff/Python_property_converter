@@ -76,10 +76,10 @@ cdef class Spam:
 
 
 <br><br>
-Indents must not contain both tabs and spaces.
+Compatible with indents that use spaces or tabs. However, an indent must not contain both tabs and spaces.
 
 <br>
-Requires Python 3.10 +
+Requires Python >= 3.10.
 
 
 <br><br>
