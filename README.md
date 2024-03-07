@@ -1,4 +1,5 @@
 <h1 align="center">Cython Property Converter</h1>
+
 ## Convert properties in Cython extension classes from the deprecated legacy syntax to the decorator syntax. ##
 
 <br><br>
