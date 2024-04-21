@@ -3,156 +3,6 @@ import distutils
 import pathlib
 
 
-class IndentTracker:
-    """All code in a property block must have its indent reduced by 1 when converting."""
-
-    prev_indent = ""
-    current_indent = ""
-    one_indent = ""
-    property_indent = ""
-    property_name = ""
-    disallow_space = False  # Prevent newlines after decorator
-
-    def update_indent(line):
-        if not line.strip():
-            return
-
-        line = IndentTracker.prevent_mixed_chars(line)
-        IndentTracker.current_indent = get_indent(line)
-
-        # Increase
-        if len(IndentTracker.current_indent) > len(IndentTracker.prev_indent):
-
-            # First indent
-            if len(IndentTracker.prev_indent) == 0:
-                IndentTracker.one_indent = IndentTracker.current_indent
-
-        # End of property block
-        if len(IndentTracker.current_indent) <= len(IndentTracker.property_indent):
-            IndentTracker.property_name = ""
-            IndentTracker.disallow_space = False
-
-        # Always set prev to current
-        IndentTracker.prev_indent = IndentTracker.current_indent
-
-    def prevent_mixed_chars(line):
-        """Prevent use of mixed spaces and tabs in an indent"""
-        indent = get_indent(line)
-        if " " in indent and "\t" in indent:
-            print(f"ERROR mixed indent on line number {line_number}: {repr(line)}")
-            print(f"\n An indent must not contain both tabs and spaces.\n")
-            raise SystemExit
-
-        return line
-
-
-class Docstring:
-    """A docstring for a property must be saved and moved to after a def statement"""
-
-    COLON_PREFIXES = (
-        "if ",
-        "elif ",
-        "else",
-        "for ",
-        "while ",
-        "def ",
-        "cdef ",
-        "cpdef ",
-        "class ",
-        "try",
-        "except",
-        "finally",
-    )
-    DEMLIM_CHARS = ("'''", '"""', "'", '"')
-
-    text = ""
-    descriptor = ""
-    delim_char = None
-
-    def new_docstring_detected(line):
-        Docstring.text = line
-
-        ## change to line.strip()[:3]?
-        # Set triple quote style
-        for delim_char in Docstring.DEMLIM_CHARS:
-            if line.strip().startswith(delim_char):
-                Docstring.delim_char = delim_char
-                break
-        else:
-            print("ERROR docstring", line)
-
-        ## change to line.strip().endswith(Docstring.delim_char)?
-        # One line docstring
-        if line.count(Docstring.delim_char) > 1:
-            Docstring.descriptor = "INSERT"
-        # Begin multi line docstring
-        else:
-            Docstring.descriptor = "MULTI_LINE_IN_PROGRESS"
-
-    def build_multi_line(line):  ## make this 2 methods?
-        if Docstring.descriptor == "MULTI_LINE_IN_PROGRESS":
-            Docstring.text = "\n".join((Docstring.text, line))
-            if line.strip().endswith(Docstring.delim_char):
-                Docstring.descriptor = "INSERT"
-            return True
-
-    def insert_docstring(line):
-        if Docstring.descriptor != "INSERT":
-            return line
-
-        if Docstring.check_inline(line):
-            modified_line = Docstring.split_inline(line)
-        else:
-            modified_line = "\n".join((line, Docstring.text))
-
-        Docstring.text = ""
-        Docstring.descriptor = ""
-
-        return modified_line
-
-    def check_inline(line):
-        """Must split combined one line statements when trying to insert a doctstring.
-        Example: def __get__(self): return self.ptr.index
-
-        Only split the line when all true:
-        inside a property,
-        there is a docstring,
-        docstring is ready to be inserted,
-        the next line is a one-linner
-        """
-
-        if (
-            line.count(":") != 1
-            or not IndentTracker.property_name
-            or not Docstring.text
-        ):
-            return
-
-        if not any(
-            line.strip().startswith(colon_prefix)
-            for colon_prefix in Docstring.COLON_PREFIXES
-        ):
-            return
-
-        line_one, line_two = line.split(":")
-
-        for each_line in (line_one, line_two):
-            if not each_line.strip():
-                return
-
-        return True
-
-    def split_inline(line):
-        line_one, line_two = line.split(":")
-
-        line_one += ":"
-        line_two = (
-            get_indent(line) + IndentTracker.one_indent + line_two.strip()
-        )  ## how does this work without adding one indent? same for docstring? +
-
-        return "\n".join((line_one, Docstring.text, line_two))
-
-
 def setup_parser():
     parser = argparse.ArgumentParser(
         description="Convert properties in Cython extension classes from the deprecated legacy syntax to the decorator syntax"
@@ -197,6 +47,158 @@ def setup_parser():
     return parser.parse_args()
 
 
+class IndentTracker:
+    """All code in a property block must have its indent reduced by 1 when converting."""
+
+    prev_indent = ""
+    current_indent = ""
+    one_indent = ""
+    property_indent = ""
+    property_name = ""
+    pause_insertions = False  # Prevent newlines immediately after property decorator
+    property_detect = ""  # Move docstrings only if immediately after property decorator
+
+    def update_indent(line):
+        if not line.strip():
+            return
+
+        line = IndentTracker.prevent_mixed_chars(line)
+        IndentTracker.current_indent = get_indent(line)
+
+        # Increase detected
+        if len(IndentTracker.current_indent) > len(IndentTracker.prev_indent):
+
+            # First indent detected
+            if len(IndentTracker.prev_indent) == 0:
+                IndentTracker.one_indent = IndentTracker.current_indent
+
+        # End of property block detected
+        if len(IndentTracker.current_indent) <= len(IndentTracker.property_indent):
+            IndentTracker.property_name = ""
+            IndentTracker.pause_insertions = False
+
+        # Always set prev to current
+        IndentTracker.prev_indent = IndentTracker.current_indent
+
+    def prevent_mixed_chars(line):
+        """Prevent use of mixed spaces and tabs in an indent"""
+        indent = get_indent(line)
+        if " " in indent and "\t" in indent:
+            print(f"ERROR mixed indent on line number {line_number}: {repr(line)}")
+            print(f"\n An indent must not contain both tabs and spaces.\n")
+            raise SystemExit
+
+        return line
+
+
+class Docstring:
+    """A docstring for a property must be saved and moved to after a def statement"""
+
+    COLON_PREFIXES = (
+        "if ",
+        "elif ",
+        "else",
+        "for ",
+        "while ",
+        "def ",
+        "cdef ",
+        "cpdef ",
+        "class ",
+        "try",
+        "except",
+        "finally",
+    )
+    DEMLIM_CHARS = ("'''", '"""', "'", '"')
+
+    text = ""
+    descriptor = ""
+    delim_char = None
+
+    def new_docstring_detected(line):
+        Docstring.text = line
+
+        ## change to line.strip()[:3]?
+        # Set quote style
+        for delim_char in Docstring.DEMLIM_CHARS:
+            if line.strip().startswith(delim_char):
+                Docstring.delim_char = delim_char
+                break
+        else:
+            print("ERROR docstring", line)
+
+        ## change to line.strip().endswith(Docstring.delim_char)?
+        # One line docstring
+        if line.count(Docstring.delim_char) > 1:
+            Docstring.descriptor = "INSERT"
+        # Begin multi line docstring
+        else:
+            Docstring.descriptor = "MULTI_LINE_IN_PROGRESS"
+
+    def insert_docstring(line):
+        if Docstring.descriptor != "INSERT":
+            return line
+
+        if Docstring.check_inline(line):
+            modified_line = Docstring.split_inline(line)
+        else:
+            modified_line = "\n".join((line, Docstring.text))
+
+        Docstring.text = ""
+        Docstring.descriptor = ""
+
+        return modified_line
+
+    def check_inline(line):
+        """Must split combined one line statements when trying to insert a doctstring.
+        Example: `def __get__(self): return self.index`
+
+        Only split the line when all true:
+        inside a property,
+        there is a docstring,
+        docstring is ready to be inserted,
+        the next line is a one-linner
+        """
+
+        if (
+            line.count(":") != 1
+            or not IndentTracker.property_name
+            or not Docstring.text
+        ):
+            return
+
+        if not any(
+            line.strip().startswith(colon_prefix)
+            for colon_prefix in Docstring.COLON_PREFIXES
+        ):
+            return
+
+        line_one, line_two = line.split(":")
+
+        for each_line in (line_one, line_two):
+            if not each_line.strip():
+                return
+
+        return True
+
+    def split_inline(line):
+        line_one, line_two = line.split(":")
+
+        line_one += ":"
+        line_two = (
+            get_indent(line) + IndentTracker.one_indent + line_two.strip()
+        )  ## how does this work without adding one indent? same for docstring? +
+
+        return "\n".join((line_one, Docstring.text, line_two))
+
+    def build_multi_line(line):
+        """Combine all docstring lines"""
+        if Docstring.descriptor == "MULTI_LINE_IN_PROGRESS":
+            Docstring.text = "\n".join((Docstring.text, line))
+            if line.strip().endswith(Docstring.delim_char):
+                Docstring.descriptor = "INSERT"
+            return True
+
+
 def remove_one_indent(line):
     return line.replace(IndentTracker.one_indent, "", 1)
 
@@ -225,17 +227,22 @@ def convert_line(line):
     Such as when moving docstrings.
     """
 
+    if IndentTracker.property_detect == "CURRENT_LINE":
+        IndentTracker.property_detect = "LINE_AFTER"
+    else:
+        IndentTracker.property_detect = ""
+
     if Docstring.build_multi_line(line):
         return
 
     if not line.strip():
         if (
-            Docstring.descriptor == "INSERT" or IndentTracker.disallow_space
+            Docstring.descriptor == "INSERT" or IndentTracker.pause_insertions
         ):  # Remove extra newline
             return
         return line
 
-    IndentTracker.disallow_space = False
+    IndentTracker.pause_insertions = False
 
     modified_line = line
 
@@ -250,7 +257,8 @@ def convert_line(line):
         case string if string.startswith("property "):
             IndentTracker.property_indent = get_indent(line)
             IndentTracker.property_name = line.split("property ")[1].split(":")[0]
-            IndentTracker.disallow_space = True
+            IndentTracker.pause_insertions = True
+            IndentTracker.property_detect = "CURRENT_LINE"
             modified_line = f"{get_indent(line)}@property"
 
         # Prop get
@@ -269,7 +277,9 @@ def convert_line(line):
                 modified_line = two_line_convert(line, "__del__", "deleter")
 
         # Docstring
-        case string if string.startswith("'") or string.startswith('"'):
+        case string if (
+            string.startswith("'") or string.startswith('"')
+        ) and IndentTracker.property_detect == "LINE_AFTER":
             if IndentTracker.property_name:
                 Docstring.new_docstring_detected(line)
                 return
