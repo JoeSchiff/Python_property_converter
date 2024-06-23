@@ -29,7 +29,7 @@ def setup_parser():
         type=str,
         choices=("cython", "pure_python"),
         default="cython",
-        help="Which class declaration syntax to use. cython: `cdef class Spam:` or pure_python `@cython.cclass\\nclass Spam:`. Default: cython",
+        help="Which class declaration syntax to use. cython: `cdef class Spam:` or pure_python: `@cython.cclass\nclass Spam:`. Default: cython",
     )
     parser.add_argument(
         "--output_mod_only",
@@ -45,9 +45,9 @@ def setup_parser():
         type=str,
         choices=("skip", "convert"),
         default="skip",
-        help="The new syntax must have a getter method before using a setter or deleter method. If a getter method does not exist for that property, you must either keep the old syntax or create an empty getter method.",
+        help="The new syntax must have a getter method before using a setter or deleter method. If a getter method does not exist for that property, you must either keep the old syntax (`skip`) or create an empty getter method (`convert`). Default: skip",
     )
-    
+
     return parser.parse_args()
 
 
@@ -66,9 +66,9 @@ class IndentTracker:
     def update_indent(line):
         if not line.strip():
             return
-        
+
         Docstring.update_property_detect()
-        
+
         IndentTracker.current_indent = get_indent(line)
 
         # Increase detected
@@ -77,7 +77,6 @@ class IndentTracker:
             # First indent detected
             if len(IndentTracker.prev_indent) == 0:
                 IndentTracker.one_indent = IndentTracker.current_indent
-
 
         # End of property block detected
         if len(IndentTracker.current_indent) <= len(IndentTracker.property_indent):
@@ -90,7 +89,7 @@ class IndentTracker:
 
     def prevent_mixed_chars(line):
         """Prevent use of mixed spaces and tabs in an indent"""
-        indent = get_indent(line)        
+        indent = get_indent(line)
         if " " in indent and "\t" in indent:
             print(f"ERROR mixed indent on line number {line_number}: {repr(line)}")
             print(f"\n An indent must not contain both tabs and spaces.\n")
@@ -99,8 +98,7 @@ class IndentTracker:
         if len(indent) > 0 and len(IndentTracker.property_indent) > 0:
             if indent[0] != IndentTracker.property_indent[0]:
                 print()
-                #print(3333333333, " ".join(str(ord(char)) for char in indent))
-
+                # print(3333333333, " ".join(str(ord(char)) for char in indent))
 
 
 class Docstring:
@@ -170,7 +168,7 @@ class Docstring:
             IndentTracker.property_detect = "LINE_AFTER"
         else:
             IndentTracker.property_detect = ""
-            
+
     def split_inline(line):
         """Must split combined one line statements when trying to insert a doctstring.
         Example: `def __get__(self): return self.index`
@@ -181,11 +179,7 @@ class Docstring:
         the next line is a one-linner
         """
 
-        if (
-            line.count(":") < 1
-            or not IndentTracker.property_name
-            or not Docstring.text
-        ):
+        if line.count(":") < 1 or not IndentTracker.property_name or not Docstring.text:
             return line
 
         if not any(
@@ -205,12 +199,9 @@ class Docstring:
                 return line
 
         line_one += ":"
-        line_two = (
-            get_indent(line) + IndentTracker.one_indent + line_two.strip()
-        )
+        line_two = get_indent(line) + IndentTracker.one_indent + line_two.strip()
 
         return "\n".join((line_one, line_two))
-
 
 
 def remove_one_indent(line):
@@ -228,14 +219,14 @@ def convert_method_name(line, old_dunder_name):
     modified_line = remove_one_indent(modified_line)
     return modified_line
 
+
 def create_decorator(line, old_dunder_name, new_name):
     """For `__set__` and `__del__`"""
     first_line = remove_one_indent(line)
     first_line = f"{get_indent(first_line)}@{IndentTracker.property_name}.{new_name}"
     second_line = convert_method_name(line, old_dunder_name)
-        
-    return "\n".join((first_line, second_line))
 
+    return "\n".join((first_line, second_line))
 
 
 def first_pass(file_path):
@@ -243,14 +234,14 @@ def first_pass(file_path):
     with open(file_path) as file:
         for line_number, line in enumerate(file.read().splitlines(), 1):
             IndentTracker.update_indent(line)
-            
+
             match_property(line)
             match_docstring(line)
-            
+
             IndentTracker.prevent_mixed_chars(line)
             modified_line = Docstring.split_inline(line)
             modified_line = no_getter(modified_line, line_number)
-            
+
             if isinstance(modified_line, str):
                 modified_file_contents = "\n".join(
                     (modified_file_contents, modified_line)
@@ -258,14 +249,20 @@ def first_pass(file_path):
 
     write_file(get_output_path(file_path), modified_file_contents)
 
+
 no_getter_skip_prop = []
+
+
 def no_getter(line, line_number):
     """Setter and deleter methods must have a getter method"""
-    
+
     if line.strip().startswith("def __get__("):
         IndentTracker.get_detect = True
-                    
-    if ( line.strip().startswith("def __set__(") or line.strip().startswith("def __del__(") ) and not IndentTracker.get_detect:
+
+    if (
+        line.strip().startswith("def __set__(")
+        or line.strip().startswith("def __del__(")
+    ) and not IndentTracker.get_detect:
         print("ERROR: `get` not detected", line, IndentTracker.property_name)
         print(line_number)
         # Create an empty getter
@@ -274,10 +271,10 @@ def no_getter(line, line_number):
             line_two = f"{IndentTracker.property_indent}{IndentTracker.one_indent}{IndentTracker.one_indent}pass"
             return "\n".join((line_one, line_two, line))
         else:
-            #raise SystemExit
+            # raise SystemExit
             no_getter_skip_prop.append(IndentTracker.property_name)
     return line
-        
+
 
 def match_class_name(line):
     if line.strip().startswith("cdef class "):
@@ -298,27 +295,34 @@ def match_property(line):
             return f"{get_indent(line)}@property"
     return line
 
+
 def match_get(line):
     if line.strip().startswith("def __get__("):
         if IndentTracker.property_name:
-            #IndentTracker.get_detect = True
+            # IndentTracker.get_detect = True
             return convert_method_name(line, "__get__")
     return line
-    
+
+
 def match_set(line):
     if line.strip().startswith("def __set__("):
         if IndentTracker.property_name:
             return create_decorator(line, "__set__", "setter")
     return line
-    
+
+
 def match_del(line):
     if line.strip().startswith("def __del__("):
         if IndentTracker.property_name:
             return create_decorator(line, "__del__", "deleter")
     return line
 
+
 def match_docstring(line):
-    if (line.strip().startswith("'") or line.strip().startswith('"') or line.strip().startswith('#')
+    if (
+        line.strip().startswith("'")
+        or line.strip().startswith('"')
+        or line.strip().startswith("#")
     ) and IndentTracker.property_detect == "LINE_AFTER":
 
         if IndentTracker.property_name:
@@ -354,9 +358,9 @@ def convert_line(line):
     modified_line = match_property(modified_line)
 
     modified_line = match_get(modified_line)
-    
+
     modified_line = match_set(modified_line)
-    
+
     modified_line = match_del(modified_line)
 
     # No matches
@@ -413,8 +417,6 @@ for file_path in pathlib.Path(input_path).glob("**/*"):
         first_pass(file_path)
 
 
-
-
 modified_files = []
 for file_path in pathlib.Path(output_path).glob("**/*"):
     if file_path.suffix not in (".pyx", ".pxi"):
@@ -444,7 +446,6 @@ for file_path in pathlib.Path(output_path).glob("**/*"):
         write_file(get_output_path(file_path), modified_file_contents)
 
 
-
 print("\n Modified files:")
 for filename in modified_files:
     print(filename)
@@ -452,5 +453,3 @@ for filename in modified_files:
 print(f"\n Number of modified files: {len(modified_files)}")
 
 print(f"\n Output directory: \n{output_path.resolve()}")
-
-
