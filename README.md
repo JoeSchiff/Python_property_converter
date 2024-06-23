@@ -98,7 +98,7 @@ cdef class Spam:
 
 <br><br>
 ### Missing getter method ###
-Consider this example of a valid setter method without a getter:
+Consider this example of a valid setter method without a getter method:
 ```
 cdef class spam:
     property url_match:
@@ -106,16 +106,10 @@ cdef class spam:
             self._url_match = url_match
             self._reload_special_cases()
 ```
-The new syntax does not allow using a setter or deleter method without a getter method. Use the `--no_getter` argument to decide how to handle this.<br>
-You can either skip this property and keep the old syntax:<br>
+However, the new syntax does not allow using a setter or deleter method without a getter method. Use the `--no_getter` argument to decide how to handle this.<br>
+You can either skip this property and keep the old syntax unchanged:<br>
 `python converter.py --no_getter skip`
-```
-cdef class spam:
-    property url_match:
-        def __set__(self, url_match):
-            self._url_match = url_match
-            self._reload_special_cases()
-```
+
 or create an empty getter method and continue with the conversion:<br>
 `python converter.py --no_getter convert`
 ```
