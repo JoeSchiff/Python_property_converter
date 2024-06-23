@@ -64,20 +64,22 @@ Give it a folder with the files to convert and a folder to put the new files:<br
   --input_dir [INPUT_DIR], -i [INPUT_DIR]
                         Path of the folder containing the files to be modified. Default: Current working directory.
   --output_dir [OUTPUT_DIR], -o [OUTPUT_DIR]
-                        Path of the folder to save the modified files. Default: create a subfolder called `new_syntax` where the
-                        script is located.
-  --class_dec {cython,pure_python}, -c {cython,pure_python}
-                        Which class declaration syntax to use. cython: `cdef class Spam:` or pure_python `@cython.cclass\nclass
-                        Spam:`. Default: cython
+                        Path of the folder to save the modified files. Default: create a subfolder called `new_syntax` where the script is located.
+  --class_declaration {cython,pure_python}, -c {cython,pure_python}
+                        Which class declaration syntax to use. cython: `cdef class Spam:` or pure_python: `@cython.cclass class Spam:`. Default: cython
   --output_mod_only OUTPUT_MOD_ONLY, -m OUTPUT_MOD_ONLY
                         True/False. Output all files or only modified files. Default: False (output all files)
+  --no_getter {skip,convert}, -n {skip,convert}
+                        The new syntax must have a getter method before using a setter or deleter method. If a getter method does not exist for that property, you must either keep the old
+                        syntax (`skip`) or create an empty getter method (`convert`). Default: skip
+
 ```
 
 <br/><br/>
 ### Class declaration syntax ###
 
 Choose either Pure Python:<br>
-`python converter.py --class_dec pure_python`
+`python converter.py --class_declaration pure_python`
 ```
 @cython.cclass
 class Spam:
@@ -86,7 +88,7 @@ class Spam:
         ...
 ```
 or Cython:<br>
-`python converter.py --class_dec cython`
+`python converter.py --class_declaration cython`
 ```
 cdef class Spam:
     @property
