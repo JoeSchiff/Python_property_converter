@@ -112,14 +112,27 @@ to here:
         "A doc string can go here."
         ...
 ```
-
+<br>
+Aditionally, one-line statements with a doctstring will be split from this:
+```    
+    property split:
+        "docstring for split"
+        def __get__(self): return self.val
+```        
+to this:
+```
+    @property
+    def split(self):
+        "docstring for split"
+        return self.val
+```
 
 <br><br>
 ### Requirements ###
 Compatible with indents that use spaces or tabs. However, an indent must not contain both tabs and spaces.
 <br><br>
 
-Requires Python >= 3.10.
+Requires Python >= 3.6.
 
 
 <br><br>
