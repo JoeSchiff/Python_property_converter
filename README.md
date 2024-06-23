@@ -2,9 +2,6 @@
 
 ## Convert properties in Cython extension classes from the deprecated legacy syntax to the decorator syntax. ##
 
-<br><br>
-### ===  Under construction  === ###
-
 
 <br><br>
 ### Is this what you're trying to do? ###
