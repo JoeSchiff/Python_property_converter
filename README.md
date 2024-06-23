@@ -114,7 +114,7 @@ to here:
         "A doc string can go here."
         ...
 ```
-<br>
+<br><br>
 Aditionally, one-line statements with a doctstring will be split from this:
 ```    
     property split:
