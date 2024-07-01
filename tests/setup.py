@@ -1,6 +1,10 @@
 from setuptools import setup
 from Cython.Build import cythonize
+from pathlib import Path
+
+
+base_path = Path(__file__).parent
 
 setup(
-    ext_modules = cythonize("/home/joepers/code/cpc/tests/input/trouble.pyx")
+    ext_modules = cythonize(f"{base_path}/input/trouble.pyx")
 )
