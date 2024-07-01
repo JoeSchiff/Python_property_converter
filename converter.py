@@ -1,5 +1,5 @@
 import argparse
-import distutils
+import shutil
 import pathlib
 
 
@@ -35,7 +35,7 @@ def setup_parser():
         "--output_mod_only",
         "-m",
         dest="output_mod_only",
-        type=lambda x: bool(distutils.util.strtobool(x)),
+        type=lambda x: bool(strtobool(x)),
         default=False,
         help="True/False. Output all files or only modified files. Default: False (output all files)",
     )
@@ -49,6 +49,21 @@ def setup_parser():
     )
 
     return parser.parse_args()
+
+
+def strtobool(val):
+    """Convert a string representation of truth to true (1) or false (0).
+    True values are 'y', 'yes', 't', 'true', 'on', and '1'; false values
+    are 'n', 'no', 'f', 'false', 'off', and '0'.  Raises ValueError if
+    'val' is anything else.
+    """
+    val = val.lower()
+    if val in ("y", "yes", "t", "true", "on", "1"):
+        return 1
+    elif val in ("n", "no", "f", "false", "off", "0"):
+        return 0
+    else:
+        raise ValueError("invalid truth value %r" % (val,))
 
 
 class IndentTracker:
@@ -393,7 +408,7 @@ def copy_orig_dir():
     if args.output_mod_only:
         return
     new_output_path = output_path.joinpath(PROJECT_NAME)
-    distutils.dir_util.copy_tree(str(input_path), str(new_output_path))
+    shutil.copytree(str(input_path), str(new_output_path))
 
 
 args = setup_parser()
