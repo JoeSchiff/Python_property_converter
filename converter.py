@@ -408,7 +408,7 @@ def copy_orig_dir():
     if args.output_mod_only:
         return
     new_output_path = output_path.joinpath(PROJECT_NAME)
-    shutil.copytree(str(input_path), str(new_output_path))
+    shutil.copytree(str(input_path), str(new_output_path), dirs_exist_ok=True)
 
 
 args = setup_parser()
