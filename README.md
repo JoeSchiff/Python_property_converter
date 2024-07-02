@@ -157,7 +157,7 @@ to this:
 Compatible with indents that use spaces or tabs. However, an indent must not contain both tabs and spaces.
 <br><br>
 
-Required Python versions >= 3.8.  
+Required Python versions >= 3.8  
 Required packages: cython
 
 
